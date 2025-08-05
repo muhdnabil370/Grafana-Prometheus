@@ -11,10 +11,11 @@ services:
       MYSQL_USER: memo_user
       MYSQL_PASSWORD: memo_pass
     ports:
-      - "3306:3306"
+      - "0.0.0.0:3306:3306"  # Bind to all interfaces
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init-db:/docker-entrypoint-initdb.d
+      - ./mysql-config:/etc/mysql/conf.d  # Add custom config
     networks:
       - memo_network
     healthcheck:
@@ -84,18 +85,36 @@ services:
 
   # Grafana
   grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3001:3000"
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin123
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    networks:
-      - memo_network
-  
+      image: grafana/grafana:latest
+      container_name: grafana
+      ports:
+        - "3001:3000"
+      environment:
+        GF_SECURITY_ADMIN_PASSWORD: admin123
+        GF_SECURITY_ALLOW_EMBEDDING: "true"
+        GF_AUTH_ANONYMOUS_ENABLED: "true"
+        GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+        GF_USERS_VIEWERS_CAN_EDIT: "true"
+        GF_PANELS_DISABLE_SANITIZE_HTML: "true"
+        GF_SECURITY_ALLOW_LOADING_UNSIGNED_PLUGINS: "grafana-pyroscope-app,grafana-exploretraces-app,grafana-metricsdrilldown-app"
+        GF_PLUGINS_ENABLE_ALPHA: "false"
+        GF_LOG_LEVEL: "warn"
+      volumes:
+        - grafana_data:/var/lib/grafana
+        - ./grafana/provisioning:/etc/grafana/provisioning
+        - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+      networks:
+        - memo_network
+      depends_on:
+        mysql:
+          condition: service_healthy
+      restart: unless-stopped
+      healthcheck:
+        test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit 1"]
+        interval: 30s
+        timeout: 10s
+        retries: 3
+
   node_exporter:
     image: prom/node-exporter:latest
     container_name: node_exporter

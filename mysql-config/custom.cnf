@@ -1,0 +1,12 @@
+[mysqld]
+# Allow connections from any host
+bind-address = 0.0.0.0
+
+# Increase connection limit if needed
+max_connections = 200
+
+# Disable DNS lookups for better performance
+skip-name-resolve
+
+default-time-zone = '+08:00'
+sql_mode=STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
